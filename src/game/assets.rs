@@ -35,43 +35,47 @@ impl ImageAssets {
 }
 
 #[derive(PartialEq, Eq, Hash, Reflect)]
-pub enum SfxAsset {
-    ButtonHover,
-    ButtonPress,
-    Step1,
-    Step2,
-    Step3,
-    Step4,
+pub enum SpriteSheetAsset {
+    Spaceship,
 }
 
 #[derive(Resource, Reflect, Deref, DerefMut)]
-pub struct SfxAssets(HashMap<SfxAsset, Handle<AudioSource>>);
+pub struct SpriteSheetAssets(
+    HashMap<SpriteSheetAsset, (Handle<Image>, Handle<TextureAtlasLayout>)>,
+);
 
-impl SfxAssets {
-    pub fn new(asset_server: &AssetServer) -> Self {
+impl SpriteSheetAssets {
+    pub fn new(
+        asset_server: &AssetServer,
+        mut texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
+    ) -> Self {
         let mut assets = HashMap::new();
 
-        assets.insert(
-            SfxAsset::ButtonHover,
-            asset_server.load("audio/sfx/button_hover.ogg"),
+        let spaceship_handle = asset_server.load_with_settings(
+            "images/ship.png",
+            |settings: &mut ImageLoaderSettings| {
+                settings.sampler = ImageSampler::nearest();
+            },
         );
+        let spaceship_atlas = TextureAtlasLayout::from_grid(UVec2::splat(70), 2, 1, None, None);
+        let spaceship_atlas_handle = texture_atlas_layouts.add(spaceship_atlas);
         assets.insert(
-            SfxAsset::ButtonPress,
-            asset_server.load("audio/sfx/button_press.ogg"),
+            SpriteSheetAsset::Spaceship,
+            (spaceship_handle, spaceship_atlas_handle),
         );
-        assets.insert(SfxAsset::Step1, asset_server.load("audio/sfx/step1.ogg"));
-        assets.insert(SfxAsset::Step2, asset_server.load("audio/sfx/step2.ogg"));
-        assets.insert(SfxAsset::Step3, asset_server.load("audio/sfx/step3.ogg"));
-        assets.insert(SfxAsset::Step4, asset_server.load("audio/sfx/step4.ogg"));
-
         Self(assets)
     }
 
-    pub fn all_loaded(&self, assets: &Assets<AudioSource>) -> bool {
-        self.0.iter().all(|(_, handle)| assets.contains(handle))
+    pub fn all_loaded(
+        &self,
+        images: &Assets<Image>,
+        atlas_layouts: &Assets<TextureAtlasLayout>,
+    ) -> bool {
+        self.0.iter().all(|(_, (img_handle, tal_handle))| {
+            images.contains(img_handle) && atlas_layouts.contains(tal_handle)
+        })
     }
 }
-
 #[derive(PartialEq, Eq, Hash, Reflect)]
 pub enum SoundtrackAsset {
     Credits,

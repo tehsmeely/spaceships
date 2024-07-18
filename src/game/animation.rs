@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-use super::{audio::sfx::Sfx, movement::MovementController};
+use super::movement::MovementController;
 use crate::AppSet;
 
 pub(super) fn plugin(app: &mut App) {
@@ -34,12 +34,7 @@ fn update_animation_movement(
     mut player_query: Query<(&MovementController, &mut Sprite, &mut PlayerAnimation)>,
 ) {
     for (controller, mut sprite, mut animation) in &mut player_query {
-        let dx = controller.0.x;
-        if dx != 0.0 {
-            sprite.flip_x = dx < 0.0;
-        }
-
-        let animation_state = if controller.0 == Vec2::ZERO {
+        let animation_state = if controller.thrust == 0.0 {
             PlayerAnimationState::Idling
         } else {
             PlayerAnimationState::Walking
@@ -71,7 +66,7 @@ fn trigger_step_sfx(mut commands: Commands, mut step_query: Query<&PlayerAnimati
             && animation.changed()
             && (animation.frame == 2 || animation.frame == 5)
         {
-            commands.trigger(Sfx::Step);
+            //commands.trigger(Sfx::Step);
         }
     }
 }

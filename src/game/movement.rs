@@ -27,45 +27,43 @@ pub(super) fn plugin(app: &mut App) {
 
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
-pub struct MovementController(pub Vec2);
+pub struct MovementController {
+    pub thrust: f32,
+    pub rotate: f32,
+}
 
 fn record_movement_controller(
     input: Res<ButtonInput<KeyCode>>,
     mut controller_query: Query<&mut MovementController>,
 ) {
     // Collect directional input.
-    let mut intent = Vec2::ZERO;
+    let mut thrust_intent = 0f32;
+    let mut rotate_intent = 0f32;
     if input.pressed(KeyCode::KeyW) || input.pressed(KeyCode::ArrowUp) {
-        intent.y += 1.0;
+        thrust_intent += 1.0;
     }
     if input.pressed(KeyCode::KeyS) || input.pressed(KeyCode::ArrowDown) {
-        intent.y -= 1.0;
+        thrust_intent -= 1.0;
     }
     if input.pressed(KeyCode::KeyA) || input.pressed(KeyCode::ArrowLeft) {
-        intent.x -= 1.0;
+        rotate_intent += 1.0;
     }
     if input.pressed(KeyCode::KeyD) || input.pressed(KeyCode::ArrowRight) {
-        intent.x += 1.0;
+        rotate_intent -= 1.0;
     }
-
-    // Normalize so that diagonal movement has the same speed as
-    // horizontal and vertical movement.
-    let intent = intent.normalize_or_zero();
 
     // Apply movement intent to controllers.
     for mut controller in &mut controller_query {
-        controller.0 = intent;
+        controller.thrust = thrust_intent;
+        controller.rotate = rotate_intent;
     }
 }
 
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 pub struct Movement {
-    /// Since Bevy's default 2D camera setup is scaled such that
-    /// one unit is one pixel, you can think of this as
-    /// "How many pixels per second should the player move?"
-    /// Note that physics engines may use different unit/pixel ratios.
-    pub speed: f32,
+    pub thrust_speed: f32,
+    pub rotate_speed: f32,
 }
 
 fn apply_movement(
@@ -73,8 +71,10 @@ fn apply_movement(
     mut movement_query: Query<(&MovementController, &Movement, &mut Transform)>,
 ) {
     for (controller, movement, mut transform) in &mut movement_query {
-        let velocity = movement.speed * controller.0;
-        transform.translation += velocity.extend(0.0) * time.delta_seconds();
+        transform.rotate_z(movement.rotate_speed * controller.rotate * time.delta_seconds());
+        let velocity =
+            movement.thrust_speed * controller.thrust * transform.local_y() * time.delta_seconds();
+        transform.translation += velocity;
     }
 }
 
