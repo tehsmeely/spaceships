@@ -17,10 +17,11 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
-            update_animation_timer.in_set(AppSet::TickTimers),
+            (update_animation_timer, update_basic_animation_timer).in_set(AppSet::TickTimers),
             (
                 update_animation_movement,
                 update_animation_atlas,
+                update_basic_animation_atlas,
                 trigger_step_sfx,
             )
                 .chain()
@@ -49,12 +50,25 @@ fn update_animation_timer(time: Res<Time>, mut query: Query<&mut PlayerAnimation
         animation.update_timer(time.delta());
     }
 }
+fn update_basic_animation_timer(time: Res<Time>, mut query: Query<&mut BasicAnimation>) {
+    for mut animation in &mut query {
+        animation.update(time.delta());
+    }
+}
 
 /// Update the texture atlas to reflect changes in the animation.
 fn update_animation_atlas(mut query: Query<(&PlayerAnimation, &mut TextureAtlas)>) {
     for (animation, mut atlas) in &mut query {
         if animation.changed() {
             atlas.index = animation.get_atlas_index();
+        }
+    }
+}
+
+fn update_basic_animation_atlas(mut query: Query<(&BasicAnimation, &mut TextureAtlas)>) {
+    for (animation, mut atlas) in &mut query {
+        if animation.changed() {
+            atlas.index = animation.frame;
         }
     }
 }
@@ -89,7 +103,7 @@ pub enum PlayerAnimationState {
 
 impl PlayerAnimation {
     /// The number of idle frames.
-    const IDLE_FRAMES: usize = 2;
+    const IDLE_FRAMES: usize = 1;
     /// The duration of each idle frame.
     const IDLE_INTERVAL: Duration = Duration::from_millis(500);
 
@@ -102,7 +116,7 @@ impl PlayerAnimation {
     }
 
     /// The number of walking frames.
-    const WALKING_FRAMES: usize = 6;
+    const WALKING_FRAMES: usize = 2;
     /// The duration of each walking frame.
     const WALKING_INTERVAL: Duration = Duration::from_millis(50);
 
@@ -150,7 +164,36 @@ impl PlayerAnimation {
     pub fn get_atlas_index(&self) -> usize {
         match self.state {
             PlayerAnimationState::Idling => self.frame,
-            PlayerAnimationState::Walking => 6 + self.frame,
+            PlayerAnimationState::Walking => Self::IDLE_FRAMES + self.frame,
         }
+    }
+}
+
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+pub struct BasicAnimation {
+    frame: usize,
+    num_frames: usize,
+    frame_timer: Timer,
+}
+
+impl BasicAnimation {
+    pub fn new(num_frames: usize, interval: Duration) -> Self {
+        Self {
+            frame: 0,
+            num_frames,
+            frame_timer: Timer::new(interval, TimerMode::Repeating),
+        }
+    }
+    pub fn changed(&self) -> bool {
+        self.frame_timer.finished()
+    }
+
+    pub fn update(&mut self, delta: Duration) {
+        self.frame_timer.tick(delta);
+        if !self.frame_timer.finished() {
+            return;
+        }
+        self.frame = (self.frame + 1) % self.num_frames
     }
 }

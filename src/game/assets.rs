@@ -37,6 +37,7 @@ impl ImageAssets {
 #[derive(PartialEq, Eq, Hash, Reflect)]
 pub enum SpriteSheetAsset {
     Spaceship,
+    EnergyBall,
 }
 
 #[derive(Resource, Reflect, Deref, DerefMut)]
@@ -57,11 +58,24 @@ impl SpriteSheetAssets {
                 settings.sampler = ImageSampler::nearest();
             },
         );
-        let spaceship_atlas = TextureAtlasLayout::from_grid(UVec2::splat(70), 2, 1, None, None);
+        let spaceship_atlas = TextureAtlasLayout::from_grid(UVec2::splat(70), 3, 1, None, None);
         let spaceship_atlas_handle = texture_atlas_layouts.add(spaceship_atlas);
         assets.insert(
             SpriteSheetAsset::Spaceship,
             (spaceship_handle, spaceship_atlas_handle),
+        );
+
+        let energy_ball_handle = asset_server.load_with_settings(
+            "images/energy_ball.png",
+            |settings: &mut ImageLoaderSettings| {
+                settings.sampler = ImageSampler::nearest();
+            },
+        );
+        let energy_ball_atlas = TextureAtlasLayout::from_grid(UVec2::splat(40), 4, 1, None, None);
+        let energy_ball_atlas_handle = texture_atlas_layouts.add(energy_ball_atlas);
+        assets.insert(
+            SpriteSheetAsset::EnergyBall,
+            (energy_ball_handle, energy_ball_atlas_handle),
         );
         Self(assets)
     }

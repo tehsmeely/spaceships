@@ -48,6 +48,7 @@ fn spawn_player(
             rotate_speed: 5.0,
         },
         WrapWithinWindow,
+        PlayerAnimation::new(),
         StateScoped(Screen::Playing),
     ));
 }

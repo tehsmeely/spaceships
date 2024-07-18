@@ -5,6 +5,8 @@
 
 use bevy::{prelude::*, window::PrimaryWindow};
 
+use super::spawn::projectiles::SpawnProjectile;
+use crate::game::spawn::player::Player;
 use crate::AppSet;
 
 pub(super) fn plugin(app: &mut App) {
@@ -12,14 +14,14 @@ pub(super) fn plugin(app: &mut App) {
     app.register_type::<MovementController>();
     app.add_systems(
         Update,
-        record_movement_controller.in_set(AppSet::RecordInput),
+        (record_movement_controller, record_inputs).in_set(AppSet::RecordInput),
     );
 
     // Apply movement based on controls.
     app.register_type::<(Movement, WrapWithinWindow)>();
     app.add_systems(
         Update,
-        (apply_movement, wrap_within_window)
+        (apply_movement, wrap_within_window, apply_velocity)
             .chain()
             .in_set(AppSet::Update),
     );
@@ -30,6 +32,16 @@ pub(super) fn plugin(app: &mut App) {
 pub struct MovementController {
     pub thrust: f32,
     pub rotate: f32,
+}
+
+#[derive(Component, Reflect, Default)]
+#[reflect(Component)]
+pub struct Velocity(Vec3);
+
+impl Velocity {
+    pub fn new(velocity: Vec3) -> Self {
+        Self(velocity)
+    }
 }
 
 fn record_movement_controller(
@@ -59,6 +71,19 @@ fn record_movement_controller(
     }
 }
 
+fn record_inputs(
+    mouse_buttons: Res<ButtonInput<MouseButton>>,
+    mut commands: Commands,
+    player_query: Query<&Transform, With<Player>>,
+) {
+    if mouse_buttons.just_pressed(MouseButton::Left) {
+        println!("Clicked");
+        if let Ok(player) = player_query.get_single() {
+            commands.trigger(SpawnProjectile(player.clone()));
+        }
+    }
+}
+
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 pub struct Movement {
@@ -75,6 +100,12 @@ fn apply_movement(
         let velocity =
             movement.thrust_speed * controller.thrust * transform.local_y() * time.delta_seconds();
         transform.translation += velocity;
+    }
+}
+
+fn apply_velocity(time: Res<Time>, mut velocity_query: Query<(&Velocity, &mut Transform)>) {
+    for (velocity, mut transform) in &mut velocity_query {
+        transform.translation += velocity.0 * time.delta_seconds();
     }
 }
 
